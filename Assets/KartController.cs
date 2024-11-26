@@ -69,11 +69,12 @@ public class KartController : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && drifting)
         {
             float time = Time.timeScale == 1 ? .2f : 1;
             Time.timeScale = time;
         }
+
 
         //Follow Collider
         transform.position = sphere.transform.position - new Vector3(0, 0.4f, 0);
@@ -109,13 +110,31 @@ public class KartController : MonoBehaviour
 
         if (drifting)
         {
-            float control = (driftDirection == 1) ? ExtensionMethods.Remap(Input.GetAxis("Horizontal"), -1, 1, 0, 2) : ExtensionMethods.Remap(Input.GetAxis("Horizontal"), -1, 1, 2, 0);
-            float powerControl = (driftDirection == 1) ? ExtensionMethods.Remap(Input.GetAxis("Horizontal"), -1, 1, .2f, 1) : ExtensionMethods.Remap(Input.GetAxis("Horizontal"), -1, 1, 1, .2f);
-            Steer(driftDirection, control);
+            // Incremento controlado de driftPower basado en tiempo
+            float powerControl = Time.deltaTime * 20f; // Incrementa gradualmente con tiempo
             driftPower += powerControl;
 
-            ColorDrift();
+            // Controla el modo de drift en función de los valores de driftPower
+            if (driftPower > 50 && driftPower < 100 && driftMode < 1)
+            {
+                SetDriftMode(0, turboColors[0]);
+            }
+            else if (driftPower >= 100 && driftPower < 150 && driftMode < 2)
+            {
+                SetDriftMode(1, turboColors[1]);
+            }
+            else if (driftPower >= 150 && driftMode < 3)
+            {
+                SetDriftMode(2, turboColors[2]);
+            }
+
+            // Steer control while drifting
+            float control = (driftDirection == 1)
+                ? ExtensionMethods.Remap(Input.GetAxis("Horizontal"), -1, 1, 0, 2)
+                : ExtensionMethods.Remap(Input.GetAxis("Horizontal"), -1, 1, 2, 0);
+            Steer(driftDirection, control);
         }
+
 
         if (Input.GetButtonUp("Jump") && drifting)
         {
@@ -171,6 +190,20 @@ public class KartController : MonoBehaviour
         //Normal Rotation
         kartNormal.up = Vector3.Lerp(kartNormal.up, hitNear.normal, Time.deltaTime * 8.0f);
         kartNormal.Rotate(0, transform.eulerAngles.y, 0);
+    }
+    private void SetDriftMode(int mode, Color turboColor)
+    {
+        driftMode = mode;
+        c = turboColor;
+
+        // Cambia los colores de las partículas
+        foreach (ParticleSystem p in primaryParticles)
+        {
+            var pmain = p.main;
+            pmain.startColor = c;
+        }
+
+        PlayFlashParticle(c);
     }
 
     public void Boost()
